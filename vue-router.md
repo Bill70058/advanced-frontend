@@ -24,9 +24,132 @@ graph LR
 - `memory`路由 * 处理跨端时的路由
 #### hash路由
 `window.location.hash = "xx"`
+##### 一个基础的hash路由
+- hash路由通过控制window.location.hash值来切换url值的变化
+- 封装的Router类包含了
+	- routes属性，是一个对象，维护了路由栈，其key值是路由路径，value是回调方法
+	- refresh方法，用于刷新页面与改变hash值时回调，需要额外通过监听`load`、`hashchange`事件传入回调方法执行，执行的回调主要是用于修改组件内容(因为是SPA所以只有内容发生改动)
+	- route方法，通过取出路径对应的回调并执行回调
+```html
+<div id="container" >
+<button onclick="window.location.hash = '#'">首页</button>
+<button onclick="window.location.hash = '#about'">关于我们</button>
+<button onclick="window.location.hash = '#user'">用户列表</button>
+</div>
+<div id="context"></div>
+```
+
+```js
+class BaseRouter {
+constructor() {
+	this.routes = {};
+	this.refresh = this.refresh.bind(this);
+	window.addEventListener('load', this.refresh);
+	window.addEventListener('hashchange', this.refresh);
+}
+
+route(path, callback) {
+	this.routes[path] = callback || function() {}
+}
+
+refresh() {
+	const path = `/${window.location.hash.slice(1) || ''}`;
+	this.routes[path]();
+}
+
+}
+  
+
+const Route = new BaseRouter();
+
+Route.route('/about', () => changeText("关于我们页面"));
+Route.route('/user', () => changeText("用户列表页"));
+Route.route('/', () => changeText("首页"));
+
+function changeText(arg) {
+	document.getElementById('context').innerHTML = arg;
+}
+```
 #### history路由
 `history./\(go|back|replace|push|forward)/`
 通过直接操作url来实现跳转
+##### 一个基础的history路由
+- 与hash路由不同的是，通过直接修改url的值进行页面跳转，比如a标签也可以作为vue-router中link的存在
+- 与hash路由一样，要维护一个routes属性，用于存储路由栈
+- 有一个init方法，一开始进入就执行，判断当前目录是否有回调值，有就执行，比如进入根目录的时候执行一些页面渲染
+- route方法，和hash路由一样，用于执行routes路由栈的回调
+- go方法，调用原生的`windwo.history.pushState`跳转页面，并执行路由栈routes的回调
+- `_bindPopstate`方法，从命名表示私有方法，在construct初始化的时候调用，用于监听`popState`方法，查看是否有状态变化，有的话修改路径值并执行回调更新页面渲染
+```html
+<div id="container">
+	<a href="./" >首页</a>
+	<a href="./about">关于我们</a>
+	<a href="./user">用户列表</a>
+</div>
+<div id="context"></div>
+```
+
+```js
+class BaseRouter {
+	constructor() {
+		this.routes = {};
+		this._bindPopstate();
+		this.init();
+	}
+
+	init(path) {
+		window.history.replaceState({path}, null, path);
+		const cb = this.routes[path];
+		if(cb) {
+		cb();
+	}
+}
+route(path, callback) {
+this.routes[path] = callback || function() {}
+}
+
+  
+
+go(path) {
+	window.history.pushState({path}, null, path);
+	const cb = this.routes[path];
+	if(cb) {
+	cb();
+	}
+}
+
+  
+
+	_bindPopstate() {
+		window.addEventListener('popstate', e => {
+		const path = e.state && e.state.path;
+		this.routes[path] && this.routes[path]();
+		})
+	}
+}
+
+  
+
+const Route = new BaseRouter();
+Route.route('./about', () => changeText("关于我们页面"));
+Route.route('./user', () => changeText("用户列表页"));
+Route.route('./', () => changeText("首页"));
+
+  
+function changeText(arg) {
+	document.getElementById('context').innerHTML = arg;
+}
+
+  
+
+container.addEventListener('click' , e => {
+	if(e.target.tagName === 'A') {
+	e.preventDefault();
+	Route.go(e.target.getAttribute('href'))
+}
+
+})
+```
 
 #### 问题1：hash路由和history路由的区别
 - hash路由一般会携带一个`#`号，不够美观。history路由不存在这个符号
