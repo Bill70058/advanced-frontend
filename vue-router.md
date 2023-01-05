@@ -79,7 +79,7 @@ function changeText(arg) {
 - 有一个init方法，一开始进入就执行，判断当前目录是否有回调值，有就执行，比如进入根目录的时候执行一些页面渲染
 - route方法，和hash路由一样，用于执行routes路由栈的回调
 - go方法，调用原生的`windwo.history.pushState`跳转页面，并执行路由栈routes的回调
-- `_bindPopstate`方法，从命名表示私有方法，在construct初始化的时候调用，用于监听`popState`方法，查看是否有状态变化，有的话修改路径值并执行回调更新页面渲染
+- `_bindPopstate`方法，从命名表示私有方法，在construct初始化的时候调用，用于监听`popState`方法，查看是否有状态变化，有的话修改路径值并执行回调更新页面渲染，因为window.history是提供了go|back|replace等方法跳转，当路由状态变化的时候popState可以监听到，所以手动实现的一个history路由的话统一通过监听popState
 ```html
 <div id="container">
 	<a href="./" >首页</a>
